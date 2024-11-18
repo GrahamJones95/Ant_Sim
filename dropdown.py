@@ -13,6 +13,7 @@ class DropDown():
         self.menu_active = False
         self.active_option = -1
         self.selected_option = -1
+        self.current_option = ""
 
     def draw(self, surf):
         pg.draw.rect(surf, self.color_menu[self.menu_active], self.rect, 0)
@@ -49,5 +50,6 @@ class DropDown():
                 elif self.draw_menu and self.active_option >= 0:
                     self.draw_menu = False
                     self.selected_option = i
+                    self.current_option = self.options[i]
                     return self.active_option
         return -1

@@ -22,6 +22,7 @@ class Ant(pg.sprite.Sprite):
         self.image = pg.Surface((12, 21)).convert()
         self.image.set_colorkey(0)
         self.teamNum = teamNum
+        self.health = 100
 
         antColor = (100,42,42) if teamNum == 1 else (50,80,80)
         # Draw Ant
