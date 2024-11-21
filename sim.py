@@ -91,30 +91,31 @@ class Simuation:
     
     def setup_obstacles(self):
         self.obstacles = Obstacles()
-
-        new_obstacles = []
-
         for obstacle in self.obstacles.rects:
             pg.draw.rect(self.screen, OBSTACLE_COLOR, obstacle)
 
     def setup_food(self):
         self.food_group = pg.sprite.Group()
 
+    def handle_user_input(self, event_list):
+        for e in event_list:
+            if e.type == pg.QUIT or e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE:
+                return True
+            elif e.type == pg.MOUSEBUTTONDOWN:
+                mousepos = pg.mouse.get_pos()
+                match self.object_dropdown_menu.current_option:
+                    case "Add Obstacle":
+                        self.obstacles.add_at_pos(mousepos)
+                    case "Add Food":
+                        self.food_group.add(Food(self.screen, mousepos))
+
     def simulate(self):
         while True:
             event_list = pg.event.get()
-            for e in event_list:
-                if e.type == pg.QUIT or e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE:
-                    return
-                elif e.type == pg.MOUSEBUTTONDOWN:
-                    mousepos = pg.mouse.get_pos()
-                    match self.object_dropdown_menu.current_option:
-                        case "Add Obstacle":
-                            self.obstacles.add_at_pos(mousepos)
-                        # case "Add Food":
-                        #     self.food_group.add([Food(self.screen, mousepos)])
+            if self.handle_user_input(event_list):
+                return
 
-            dt = self.clock.tick(FPS) / 100
+            dt = self.clock.tick(FPS) / 300
 
             self.ant_group_1.update(dt)
             self.ant_group_2.update(dt)
