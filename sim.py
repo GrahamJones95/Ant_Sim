@@ -42,102 +42,111 @@ class Obstacles():
 
         while(obstacles_added < NUM_OBSTACLES):
             top_left = (randint(0, WIDTH), randint(0,HEIGHT))
-
-            width = randint(10, 60)
-            height = randint(10, 60)
-            
-            width = width if top_left[0] + width < WIDTH else WIDTH - top_left[0]
-            height = height if top_left[1] + height < HEIGHT else HEIGHT - top_left[1]
-
-            self.rects.append(pg.Rect(top_left, (width, height)))
+            self.add_at_pos(top_left)
             obstacles_added += 1
 
+    def add_at_pos(self, pos):
+        width = randint(10, 60)
+        height = randint(10, 60)
+        
+        width = width if pos[0] + width < WIDTH else WIDTH - pos[0]
+        height = height if pos[1] + height < HEIGHT else HEIGHT - pos[1]
 
-def main():
-    pg.init()  # prepare window
-    pg.display.set_caption("Ant War")
+        self.rects.append(pg.Rect(pos, (width, height)))
+class Simuation:
+    def __init__(self):
+        pg.init()  # prepare window
+        pg.display.set_caption("Ant War")
 
-    try: pg.display.set_icon(pg.img.load("nants.png"))
-    except: print("FYI: nants.png icon not found, skipping..")
+        try: pg.display.set_icon(pg.img.load("nants.png"))
+        except: print("FYI: nants.png icon not found, skipping..")
 
-    # setup fullscreen or window mode
-    screen = pg.display.set_mode((WIDTH, HEIGHT), pg.SCALED, vsync=VSYNC)
+        self.screen = pg.display.set_mode((WIDTH, HEIGHT), pg.SCALED, vsync=VSYNC)
 
-    cur_w, cur_h = screen.get_size()
-    screenSize = (cur_w, cur_h)
-    nest1 = (cur_w/4, cur_h/2)
-    nest2 = (3*cur_w/4, cur_h/2)
+        self.clock = pg.time.Clock()
 
-    ant_group_1 = pg.sprite.Group()
-    ant_group_2 = pg.sprite.Group()
-    food_group = pg.sprite.Group()
+        self.object_dropdown_menu = DropDown(
+        [COLOR_INACTIVE, COLOR_ACTIVE],
+        [COLOR_LIST_INACTIVE, COLOR_LIST_ACTIVE],
+        0, 0, 200, 50, 
+        pg.font.SysFont(None, 30), 
+        "Select Mode", ["Add Food", "Add Obstacle"])
 
-    obstacles = Obstacles()
+        self.setup_ant_groups()
+        self.setup_obstacles()
+        self.setup_food()
 
-    new_obstacles = []
+    def setup_ant_groups(self):
+        self.ant_group_1 = pg.sprite.Group()
+        self.ant_group_2 = pg.sprite.Group()
 
-    for obstacle in obstacles.rects:
-        pg.draw.rect(screen, OBSTACLE_COLOR, obstacle)
+        cur_w, cur_h = self.screen.get_size()
 
-    for n in range(INITIAL_ANT_COUNT):
-        ant_group_1.add(Ant(screen, nest1, 1))
-        ant_group_2.add(Ant(screen, nest2, 2))
+        self.nest1 = (cur_w/4, cur_h/2)
+        self.nest2 = (3*cur_w/4, cur_h/2)
 
-    font = pg.font.Font(None, 30)
-    clock = pg.time.Clock()
+        for n in range(INITIAL_ANT_COUNT):
+            self.ant_group_1.add(Ant(self.screen, self.nest1, 1))
+            self.ant_group_2.add(Ant(self.screen, self.nest2, 2))
+    
+    def setup_obstacles(self):
+        self.obstacles = Obstacles()
 
-    object_dropdown_menu = DropDown(
-    [COLOR_INACTIVE, COLOR_ACTIVE],
-    [COLOR_LIST_INACTIVE, COLOR_LIST_ACTIVE],
-    0, 0, 200, 50, 
-    pg.font.SysFont(None, 30), 
-    "Select Mode", ["Add Food", "Add Obstacle"])
+        new_obstacles = []
 
-    while True:
-        event_list = pg.event.get()
-        for e in event_list:
-            if e.type == pg.QUIT or e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE:
-                return
-            elif e.type == pg.MOUSEBUTTONDOWN:
-                mousepos = pg.mouse.get_pos()
-                match object_dropdown_menu.current_option:
-                    case "Add Obstacle":
-                        new_obstacles.append(mousepos)
-                    case "Add Food":
-                        food_group.add([Food(screen, mousepos)])
+        for obstacle in self.obstacles.rects:
+            pg.draw.rect(self.screen, OBSTACLE_COLOR, obstacle)
 
-        dt = clock.tick(FPS) / 100
+    def setup_food(self):
+        self.food_group = pg.sprite.Group()
 
-        ant_group_1.update(dt)
-        ant_group_2.update(dt)
+    def simulate(self):
+        while True:
+            event_list = pg.event.get()
+            for e in event_list:
+                if e.type == pg.QUIT or e.type == pg.KEYDOWN and e.key == pg.K_ESCAPE:
+                    return
+                elif e.type == pg.MOUSEBUTTONDOWN:
+                    mousepos = pg.mouse.get_pos()
+                    match self.object_dropdown_menu.current_option:
+                        case "Add Obstacle":
+                            self.obstacles.add_at_pos(mousepos)
+                        # case "Add Food":
+                        #     self.food_group.add([Food(self.screen, mousepos)])
 
-        for ant_collide, collide_list in pg.sprite.groupcollide(ant_group_1, ant_group_2, False, False).items():
-            for ant in [ant_collide, *collide_list]:
-                ant.health -= len(collide_list)
-                if ant.health < 0:
-                    ant.kill()
-                    # ant_group_1.add(Ant(screen, nest1, 1))
-                    # ant_group_2.add(Ant(screen, nest2, 2))
-            
+            dt = self.clock.tick(FPS) / 100
 
-        screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
+            self.ant_group_1.update(dt)
+            self.ant_group_2.update(dt)
 
-        selected_option = object_dropdown_menu.update(event_list)
-        if selected_option >= 0:
-            object_dropdown_menu.main = object_dropdown_menu.options[selected_option]
+            for ant_collide, collide_list in pg.sprite.groupcollide(self.ant_group_1, self.ant_group_2, False, False).items():
+                for ant in [ant_collide, *collide_list]:
+                    ant.health -= len(collide_list)
+                    if ant.health < 0:
+                        ant.kill()
+                        # ant_group_1.add(Ant(screen, nest1, 1))
+                        # ant_group_2.add(Ant(screen, nest2, 2))
+                
 
-        for obstacle in obstacles.rects:
-            pg.draw.rect(screen, OBSTACLE_COLOR, obstacle)
-        for obstacle in new_obstacles:
-            pg.draw.circle(screen, OBSTACLE_COLOR, obstacle, 10)
+            self.screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
 
-        ant_group_1.draw(screen)
-        ant_group_2.draw(screen)
-        food_group.draw(screen)
-        object_dropdown_menu.draw(screen)
-        pg.display.update()
+            selected_option = self.object_dropdown_menu.update(event_list)
+            if selected_option >= 0:
+                self.object_dropdown_menu.main = self.object_dropdown_menu.options[selected_option]
 
+            for obstacle in self.obstacles.rects:
+                pg.draw.rect(self.screen, OBSTACLE_COLOR, obstacle)
 
+            self.ant_group_1.draw(self.screen)
+            self.ant_group_2.draw(self.screen)
+            self.food_group.draw(self.screen)
+            self.object_dropdown_menu.draw(self.screen)
+            pg.display.update()
+
+def main():    
+    sim = Simuation()
+    sim.simulate()
+    
 if __name__ == '__main__':
     main()  
     pg.quit()
