@@ -5,7 +5,13 @@ import numpy as np
 from enum import Enum
 PRATIO = 5 
 
-FoodColor = (50, 255, 50)
+FoodColor = (111, 168, 50)
+ObstacleColor = (201, 159, 74)
+
+def is_food(color):
+    if(color[1] == 0):
+         return False
+    return abs(FoodColor[0]/FoodColor[1] - color[0]/color[1])  < 0.0001
 
 class AntMode(Enum):
      FIND_FOOD = 0
@@ -24,9 +30,11 @@ class AntSplat(pg.sprite.Sprite):
 
         self.image = pg.Surface([40,40])
         self.image.set_colorkey(0)
-        self.color = [255,0,0]
+        self.color = [215,0,0]
 
-        pg.draw.circle(self.image, self.color, [20, 20], 10)
+        pg.draw.circle(self.image, self.color, [20, 20], 8)
+
+        self.splatters = [[randint(-12,12), randint(-12,12)] for _ in range(10)]        
         self.rect = self.image.get_rect(center=pos)
         
 
@@ -34,7 +42,9 @@ class AntSplat(pg.sprite.Sprite):
         if(self.color[0] >= 30):
              self.color[0] -= 0.4
 
-        pg.draw.circle(self.image, self.color, [20, 20], 10)
+        pg.draw.circle(self.image, self.color, [20, 20], 9)
+        for splatter in self.splatters:
+            pg.draw.circle(self.image, self.color, [20+splatter[0], 20+splatter[1]], 5)
 
 class Ant(pg.sprite.Sprite):
     
@@ -100,11 +110,10 @@ class Ant(pg.sprite.Sprite):
         if self.drawSurf.get_rect().collidepoint(right_sens1) and self.drawSurf.get_rect().collidepoint(right_sens2):
             right_GA_result = max(self.drawSurf.get_at(right_sens1)[:3],self.drawSurf.get_at(right_sens2)[:3])
         
-        FoodColor = (50, 255, 50)
-
         wallColor = (50,50,50)  # avoid walls of this color
 
         if self.mode == AntMode.FIND_FOOD and mid_GA_result == FoodColor: # if food
+        # if self.mode == AntMode.FIND_FOOD and is_food(mid_GA_result): # if food
                 self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize() #pg.Vector2(self.nest - self.pos).normalize()
                 #self.lastFood = self.pos + pg.Vector2(21, 0).rotate(self.ang)
                 maxSpeed = 5
@@ -119,16 +128,16 @@ class Ant(pg.sprite.Sprite):
             else:
                  self.desireDir += pg.Vector2(self.nest.pos - self.pos).normalize() * .08
 
-        obstacle_color = (201, 159, 74)
-        if left_GA_result == wallColor or left_GA_result == obstacle_color:
+        
+        if left_GA_result == wallColor or left_GA_result == ObstacleColor:
             self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
             wandrStr = .1
             steerStr = 7
-        elif right_GA_result == wallColor or right_GA_result == obstacle_color:
+        elif right_GA_result == wallColor or right_GA_result == ObstacleColor:
             self.desireDir += pg.Vector2(0,-2).rotate(self.ang) #.normalize()
             wandrStr = .1
             steerStr = 7
-        elif mid_GA_result == wallColor or mid_GA_result == obstacle_color:
+        elif mid_GA_result == wallColor or mid_GA_result == ObstacleColor:
             self.desireDir = pg.Vector2(-2,0).rotate(self.ang) #.normalize()
             maxSpeed = 4
             wandrStr = .1

@@ -2,7 +2,7 @@ from math import pi, sin, cos, atan2, radians, degrees
 from random import randint
 import pygame as pg
 import numpy as np
-from ant import Ant, AntSplat
+from ant import Ant, AntSplat, FoodColor, ObstacleColor
 
 from dropdown import DropDown
 
@@ -14,14 +14,12 @@ FPS = 60                # 48-90
 VSYNC = True            # limit frame rate to refresh rate
 SHOWFPS = True          # show framerate debug
 NUM_OBSTACLES = 30
-OBSTACLE_COLOR = (201, 159, 74)
 
 COLOR_INACTIVE = (100, 80, 255)
 COLOR_ACTIVE = (100, 200, 255)
 COLOR_LIST_INACTIVE = (255, 100, 100)
 COLOR_LIST_ACTIVE = (255, 150, 150)
 
-FoodColor = (50, 255, 50)
 FoodRadius = 15
 
 NEW_ANT_FOOD = 8
@@ -44,9 +42,17 @@ class Food(pg.sprite.Sprite):
         super().__init__()
         self.drawSurf = drawSurf
         self.pos = pos
-        self.image = pg.Surface((FoodRadius,FoodRadius))
+        self.image = pg.Surface((FoodRadius,FoodRadius)).convert_alpha()
         self.rect = self.image.get_rect(center=self.pos)
+        self.color = list(FoodColor)
         pg.draw.circle(self.image, FoodColor, (7.5,7.5), 7.5)
+
+    def update(self):
+        if(self.color[2] <= 0 ):
+            self.kill()
+            return
+        #self.color = [self.color[i] - FoodColor[i]/5000 for i in range(3)]
+        pg.draw.circle(self.image, self.color, (7.5,7.5), 7.5)
 
 class Obstacles():
     def __init__(self):
@@ -102,6 +108,13 @@ class Simuation:
         self.nest1 = Nest((cur_w/4, cur_h/2))
         self.nest2 = Nest((3*cur_w/4, cur_h/2))
 
+        self.nest1_image_pos = (cur_w/4 - 25, cur_h/2)
+        self.nest2_image_pos = (3*cur_w/4 - 25, cur_h/2)
+
+        anthill_image = pg.image.load("ant_hill.png").convert_alpha()
+        anthill_image = pg.transform.scale(anthill_image, [50,50])
+        self.ANT_HILL_1 = anthill_image
+        
         for n in range(INITIAL_ANT_COUNT):
             self.ant_group_1.add(Ant(self.screen, self.nest1, 1))
             self.ant_group_2.add(Ant(self.screen, self.nest2, 2))
@@ -109,7 +122,7 @@ class Simuation:
     def setup_obstacles(self):
         self.obstacles = Obstacles()
         for obstacle in self.obstacles.rects:
-            pg.draw.rect(self.screen, OBSTACLE_COLOR, obstacle)
+            pg.draw.rect(self.screen, ObstacleColor, obstacle)
 
     def setup_food(self):
         self.food_group = pg.sprite.Group()
@@ -156,6 +169,8 @@ class Simuation:
             self.ant_group_1.update(dt)
             self.ant_group_2.update(dt)
             self.ant_splat_group.update()
+            self.food_group.update()
+
 
             self.handle_ant_collisions()
 
@@ -166,8 +181,10 @@ class Simuation:
                 self.object_dropdown_menu.main = self.object_dropdown_menu.options[selected_option]
 
             for obstacle in self.obstacles.rects:
-                pg.draw.rect(self.screen, OBSTACLE_COLOR, obstacle)
-
+                pg.draw.rect(self.screen, ObstacleColor, obstacle)
+            
+            self.screen.blit(self.ANT_HILL_1, self.nest1_image_pos)
+            self.screen.blit(self.ANT_HILL_1, self.nest2_image_pos)
             self.ant_splat_group.draw(self.screen)
             self.ant_group_1.draw(self.screen)
             self.ant_group_2.draw(self.screen)
@@ -176,7 +193,15 @@ class Simuation:
             self.food_group.draw(self.screen)
             self.object_dropdown_menu.draw(self.screen)
             msg = pg.font.SysFont(None, 30).render("Nest 1 Count: {} Nest 2 Count: {}".format(len(self.ant_group_1.sprites()), len(self.ant_group_2.sprites())),1, (255, 255, 255))
+            # msg.fill((255,255,255))
+            msg_background = pg.Surface([i+20 for i in msg.get_bounding_rect().size])
+            msg_background.fill((200,200,200))
+            msg_background.set_alpha(180)
+            self.screen.blit(msg_background, msg_background.get_rect(center=[800,570]))
             self.screen.blit(msg, msg.get_rect(center=[800,570]))
+            
+            
+
             pg.display.update()
 
 def main():    
