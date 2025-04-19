@@ -23,13 +23,27 @@ COLOR_LIST_ACTIVE = (255, 150, 150)
 FoodColor = (50, 255, 50)
 FoodRadius = 15
 
+NEW_ANT_FOOD = 8
+
+class Nest:
+    def __init__(self, pos):
+        self.pos = pos
+        self.food = 0
+
+    def make_new(self):
+        if self.food >= NEW_ANT_FOOD:
+            print("Food count: {}".format(self.food))
+            self.food -= NEW_ANT_FOOD
+            return True
+        return False
+
 class Food(pg.sprite.Sprite):
 
-    def __init(self, drawSurf, pos):
+    def __init__(self, drawSurf, pos):
         super().__init__()
         self.drawSurf = drawSurf
         self.pos = pos
-        self.image = pg.Surface((FoodRadius,FoodRadius)).convert()
+        self.image = pg.Surface((FoodRadius,FoodRadius))
         self.rect = self.image.get_rect(center=self.pos)
         pg.draw.circle(self.image, FoodColor, (7.5,7.5), 7.5)
 
@@ -53,6 +67,7 @@ class Obstacles():
         height = height if pos[1] + height < HEIGHT else HEIGHT - pos[1]
 
         self.rects.append(pg.Rect(pos, (width, height)))
+
 class Simuation:
     def __init__(self):
         pg.init()  # prepare window
@@ -82,8 +97,8 @@ class Simuation:
 
         cur_w, cur_h = self.screen.get_size()
 
-        self.nest1 = (cur_w/4, cur_h/2)
-        self.nest2 = (3*cur_w/4, cur_h/2)
+        self.nest1 = Nest((cur_w/4, cur_h/2))
+        self.nest2 = Nest((3*cur_w/4, cur_h/2))
 
         for n in range(INITIAL_ANT_COUNT):
             self.ant_group_1.add(Ant(self.screen, self.nest1, 1))
@@ -109,25 +124,37 @@ class Simuation:
                     case "Add Food":
                         self.food_group.add(Food(self.screen, mousepos))
 
+    def handle_ant_collisions(self):
+        for ant, collide_list in pg.sprite.groupcollide(self.ant_group_1, self.ant_group_2, False, False).items():
+            ant.health -= len(collide_list) * 4
+            if ant.health < 0:
+                ant.kill()
+                    # ant_group_1.add(Ant(screen, nest1, 1))
+                    # ant_group_2.add(Ant(screen, nest2, 2))
+
+        for ant, collide_list in pg.sprite.groupcollide(self.ant_group_2, self.ant_group_1, False, False).items():
+            ant.health -= len(collide_list) * 4
+            if ant.health < 0:
+                ant.kill()
+                    # ant_group_1.add(Ant(screen, nest1, 1))
+                    # ant_group_2.add(Ant(screen, nest2, 2))
+        if self.nest1.make_new():
+            self.ant_group_1.add(Ant(self.screen, self.nest1, 1))
+        if self.nest2.make_new():
+            self.ant_group_2.add(Ant(self.screen, self.nest2, 2))
+
     def simulate(self):
         while True:
             event_list = pg.event.get()
             if self.handle_user_input(event_list):
                 return
 
-            dt = self.clock.tick(FPS) / 300
+            dt = self.clock.tick(FPS) / 100
 
             self.ant_group_1.update(dt)
             self.ant_group_2.update(dt)
 
-            for ant_collide, collide_list in pg.sprite.groupcollide(self.ant_group_1, self.ant_group_2, False, False).items():
-                for ant in [ant_collide, *collide_list]:
-                    ant.health -= len(collide_list)
-                    if ant.health < 0:
-                        ant.kill()
-                        # ant_group_1.add(Ant(screen, nest1, 1))
-                        # ant_group_2.add(Ant(screen, nest2, 2))
-                
+            self.handle_ant_collisions()
 
             self.screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
 
@@ -142,6 +169,8 @@ class Simuation:
             self.ant_group_2.draw(self.screen)
             self.food_group.draw(self.screen)
             self.object_dropdown_menu.draw(self.screen)
+            msg = pg.font.SysFont(None, 30).render("Nest 1 Count: {} Nest 2 Count: {}".format(len(self.ant_group_1.sprites()), len(self.ant_group_2.sprites())),1, (255, 255, 255))
+            self.screen.blit(msg, msg.get_rect(center=[800,570]))
             pg.display.update()
 
 def main():    
