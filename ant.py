@@ -2,8 +2,14 @@ from math import pi, sin, cos, atan2, radians, degrees
 from random import randint
 import pygame as pg
 import numpy as np
-
+from enum import Enum
 PRATIO = 5 
+
+FoodColor = (50, 255, 50)
+
+class AntMode(Enum):
+     FIND_FOOD = 0
+     RETURN_NEST = 1
 
 class Vec2():
 	def __init__(self, x=0, y=0):
@@ -35,16 +41,19 @@ class Ant(pg.sprite.Sprite):
         pg.draw.ellipse(self.image, antColor, [4, 6, 4, 9]) # body
         pg.draw.ellipse(self.image, antColor, [3, 13, 6, 8]) # rear
         
+        self.food_blit = pg.Surface([3,3])
+        pg.draw.circle(self.food_blit, FoodColor, [0,0], 10)
         # save drawing for later
         self.orig_img = pg.transform.rotate(self.image.copy(), -90)
-        self.rect = self.image.get_rect(center=self.nest)
+        self.rect = self.image.get_rect(center=self.nest.pos)
         self.ang = randint(0, 360)
         self.desireDir = pg.Vector2(cos(radians(self.ang)),sin(radians(self.ang)))
         self.pos = pg.Vector2(self.rect.center)
         self.vel = pg.Vector2(0,0)
-        self.last_sdp = (nest[0]/10/2,nest[1]/10/2)
+        self.last_sdp = (nest.pos[0]/10/2,nest.pos[1]/10/2)
         self.mode = 0
-
+        self.mode = AntMode.FIND_FOOD
+    
     def update(self, dt):  # behavior
         mid_result = left_result = right_result = [0,0,0]
         mid_GA_result = left_GA_result = right_GA_result = [0,0,0]
@@ -64,14 +73,34 @@ class Ant(pg.sprite.Sprite):
         right_sens2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
         # May still need to adjust these sensor positions, to improve following.
 
+        
+        
         if self.drawSurf.get_rect().collidepoint(mid_sensL) and self.drawSurf.get_rect().collidepoint(mid_sensR):
             mid_GA_result = max(self.drawSurf.get_at(mid_sensL)[:3], self.drawSurf.get_at(mid_sensR)[:3])
         if self.drawSurf.get_rect().collidepoint(left_sens1) and self.drawSurf.get_rect().collidepoint(left_sens2):
             left_GA_result = max(self.drawSurf.get_at(left_sens1)[:3],self.drawSurf.get_at(left_sens2)[:3])
         if self.drawSurf.get_rect().collidepoint(right_sens1) and self.drawSurf.get_rect().collidepoint(right_sens2):
             right_GA_result = max(self.drawSurf.get_at(right_sens1)[:3],self.drawSurf.get_at(right_sens2)[:3])
+        
+        FoodColor = (50, 255, 50)
 
         wallColor = (50,50,50)  # avoid walls of this color
+
+        if self.mode == AntMode.FIND_FOOD and mid_GA_result == FoodColor: # if food
+                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize() #pg.Vector2(self.nest - self.pos).normalize()
+                #self.lastFood = self.pos + pg.Vector2(21, 0).rotate(self.ang)
+                maxSpeed = 5
+                wandrStr = .01
+                steerStr = 5
+                self.mode = AntMode.RETURN_NEST
+
+        elif(self.mode == AntMode.RETURN_NEST):
+            if(self.pos.distance_to(self.nest.pos) < 20):
+                 self.mode = AntMode.FIND_FOOD
+                 self.nest.food += 1
+            else:
+                 self.desireDir += pg.Vector2(self.nest.pos - self.pos).normalize() * .08
+
         obstacle_color = (201, 159, 74)
         if left_GA_result == wallColor or left_GA_result == obstacle_color:
             self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
@@ -111,6 +140,15 @@ class Ant(pg.sprite.Sprite):
         self.vel = velo if pg.Vector2(velo).magnitude() <= maxSpeed else pg.Vector2(velo.normalize() * maxSpeed)
         self.pos += self.vel * dt
         self.ang = degrees(atan2(self.vel[1],self.vel[0]))
+
+        
+        if(self.mode == AntMode.RETURN_NEST):
+            self.food_blit.fill(FoodColor)
+        else:
+            self.food_blit.fill((0,0,0))
+
+        self.orig_img.blit(self.food_blit, [18,4])
+
         # adjusts angle of img to match heading
         self.image = pg.transform.rotate(self.orig_img, -self.ang)
         self.rect = self.image.get_rect(center=self.rect.center)  # recentering fix
