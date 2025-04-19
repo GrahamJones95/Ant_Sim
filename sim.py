@@ -2,7 +2,8 @@ from math import pi, sin, cos, atan2, radians, degrees
 from random import randint
 import pygame as pg
 import numpy as np
-from ant import Ant
+from ant import Ant, AntSplat
+
 from dropdown import DropDown
 
 FLLSCRN = False         # True for Fullscreen, or False for Window
@@ -94,6 +95,7 @@ class Simuation:
     def setup_ant_groups(self):
         self.ant_group_1 = pg.sprite.Group()
         self.ant_group_2 = pg.sprite.Group()
+        self.ant_splat_group = pg.sprite.Group()
 
         cur_w, cur_h = self.screen.get_size()
 
@@ -128,16 +130,16 @@ class Simuation:
         for ant, collide_list in pg.sprite.groupcollide(self.ant_group_1, self.ant_group_2, False, False).items():
             ant.health -= len(collide_list) * 4
             if ant.health < 0:
+                self.ant_splat_group.add(AntSplat(ant.pos))
                 ant.kill()
-                    # ant_group_1.add(Ant(screen, nest1, 1))
-                    # ant_group_2.add(Ant(screen, nest2, 2))
+
 
         for ant, collide_list in pg.sprite.groupcollide(self.ant_group_2, self.ant_group_1, False, False).items():
             ant.health -= len(collide_list) * 4
             if ant.health < 0:
+                self.ant_splat_group.add(AntSplat(ant.pos))
                 ant.kill()
-                    # ant_group_1.add(Ant(screen, nest1, 1))
-                    # ant_group_2.add(Ant(screen, nest2, 2))
+
         if self.nest1.make_new():
             self.ant_group_1.add(Ant(self.screen, self.nest1, 1))
         if self.nest2.make_new():
@@ -153,6 +155,7 @@ class Simuation:
 
             self.ant_group_1.update(dt)
             self.ant_group_2.update(dt)
+            self.ant_splat_group.update()
 
             self.handle_ant_collisions()
 
@@ -165,8 +168,11 @@ class Simuation:
             for obstacle in self.obstacles.rects:
                 pg.draw.rect(self.screen, OBSTACLE_COLOR, obstacle)
 
+            self.ant_splat_group.draw(self.screen)
             self.ant_group_1.draw(self.screen)
             self.ant_group_2.draw(self.screen)
+            
+
             self.food_group.draw(self.screen)
             self.object_dropdown_menu.draw(self.screen)
             msg = pg.font.SysFont(None, 30).render("Nest 1 Count: {} Nest 2 Count: {}".format(len(self.ant_group_1.sprites()), len(self.ant_group_2.sprites())),1, (255, 255, 255))

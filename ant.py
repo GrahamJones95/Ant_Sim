@@ -17,6 +17,24 @@ class Vec2():
 		self.y = y
 	def vint(self):
 		return (int(self.x), int(self.y))
+     
+class AntSplat(pg.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__()
+
+        self.image = pg.Surface([40,40])
+        self.image.set_colorkey(0)
+        self.color = [255,0,0]
+
+        pg.draw.circle(self.image, self.color, [20, 20], 10)
+        self.rect = self.image.get_rect(center=pos)
+        
+
+    def update(self): 
+        if(self.color[0] >= 30):
+             self.color[0] -= 0.4
+
+        pg.draw.circle(self.image, self.color, [20, 20], 10)
 
 class Ant(pg.sprite.Sprite):
     
