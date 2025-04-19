@@ -81,6 +81,7 @@ class Ant(pg.sprite.Sprite):
         self.last_sdp = (nest.pos[0]/10/2,nest.pos[1]/10/2)
         self.mode = 0
         self.mode = AntMode.FIND_FOOD
+        self.has_food = False
     
     def update(self, dt):  # behavior
         mid_result = left_result = right_result = [0,0,0]
@@ -112,10 +113,10 @@ class Ant(pg.sprite.Sprite):
         
         wallColor = (50,50,50)  # avoid walls of this color
 
-        if self.mode == AntMode.FIND_FOOD and mid_GA_result == FoodColor: # if food
-        # if self.mode == AntMode.FIND_FOOD and is_food(mid_GA_result): # if food
-                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize() #pg.Vector2(self.nest - self.pos).normalize()
-                #self.lastFood = self.pos + pg.Vector2(21, 0).rotate(self.ang)
+        # if self.mode == AntMode.FIND_FOOD and mid_GA_result == FoodColor: # if food
+        # # if self.mode == AntMode.FIND_FOOD and is_food(mid_GA_result): # if food
+        if self.mode == AntMode.FIND_FOOD and self.has_food:
+                self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize() 
                 maxSpeed = 5
                 wandrStr = .01
                 steerStr = 5
@@ -124,6 +125,7 @@ class Ant(pg.sprite.Sprite):
         elif(self.mode == AntMode.RETURN_NEST):
             if(self.pos.distance_to(self.nest.pos) < 20):
                  self.mode = AntMode.FIND_FOOD
+                 self.has_food = False
                  self.nest.food += 1
             else:
                  self.desireDir += pg.Vector2(self.nest.pos - self.pos).normalize() * .08

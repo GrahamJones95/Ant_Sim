@@ -2,7 +2,7 @@ from math import pi, sin, cos, atan2, radians, degrees
 from random import randint
 import pygame as pg
 import numpy as np
-from ant import Ant, AntSplat, FoodColor, ObstacleColor
+from ant import Ant, AntSplat, FoodColor, ObstacleColor, AntMode
 
 from dropdown import DropDown
 
@@ -23,6 +23,7 @@ COLOR_LIST_ACTIVE = (255, 150, 150)
 FoodRadius = 15
 
 NEW_ANT_FOOD = 8
+INITIAL_FOOD_AMOUNT = 8
 
 class Nest:
     def __init__(self, pos):
@@ -46,12 +47,16 @@ class Food(pg.sprite.Sprite):
         self.rect = self.image.get_rect(center=self.pos)
         self.color = list(FoodColor)
         pg.draw.circle(self.image, FoodColor, (7.5,7.5), 7.5)
+        self.food_remaining = INITIAL_FOOD_AMOUNT
 
     def update(self):
-        if(self.color[2] <= 0 ):
+        # if(self.color[2] <= 0 ):
+        #     self.kill()
+        #     return
+        if(self.food_remaining <= 0):
             self.kill()
             return
-        #self.color = [self.color[i] - FoodColor[i]/5000 for i in range(3)]
+        self.color = [(self.food_remaining*FoodColor[i])/INITIAL_FOOD_AMOUNT for i in range(3)]
         pg.draw.circle(self.image, self.color, (7.5,7.5), 7.5)
 
 class Obstacles():
@@ -158,6 +163,17 @@ class Simuation:
         if self.nest2.make_new():
             self.ant_group_2.add(Ant(self.screen, self.nest2, 2))
 
+    def handle_food_collision(self):
+        for ant, collide_list in pg.sprite.groupcollide(self.ant_group_1, self.food_group, False, False).items():
+            if(ant.mode == AntMode.FIND_FOOD):
+                ant.has_food = True
+                collide_list[0].food_remaining -= 1
+
+        for ant, collide_list in pg.sprite.groupcollide(self.ant_group_2, self.food_group, False, False).items():
+            if(ant.mode == AntMode.FIND_FOOD):
+                ant.has_food = True
+                collide_list[0].food_remaining -= 1
+
     def simulate(self):
         while True:
             event_list = pg.event.get()
@@ -173,6 +189,7 @@ class Simuation:
 
 
             self.handle_ant_collisions()
+            self.handle_food_collision()
 
             self.screen.fill(0) # fill MUST be after sensors update, so previous draw is visible to them
 
@@ -183,9 +200,9 @@ class Simuation:
             for obstacle in self.obstacles.rects:
                 pg.draw.rect(self.screen, ObstacleColor, obstacle)
             
+            self.ant_splat_group.draw(self.screen)
             self.screen.blit(self.ANT_HILL_1, self.nest1_image_pos)
             self.screen.blit(self.ANT_HILL_1, self.nest2_image_pos)
-            self.ant_splat_group.draw(self.screen)
             self.ant_group_1.draw(self.screen)
             self.ant_group_2.draw(self.screen)
             
