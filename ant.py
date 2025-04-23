@@ -57,7 +57,7 @@ class Phermone(pg.sprite.Sprite):
         self.image.set_colorkey(0)
         self.color = TrailColors[teamNum - 1]
         self.teamNum = teamNum
-        self.remaining = 500
+        self.remaining = 800
 
         pg.draw.circle(self.image, self.color, [5, 5], 2)
         self.rect = self.image.get_rect(center=[pos[0] + 10, pos[1] + 10])
@@ -116,12 +116,21 @@ class Ant(pg.sprite.Sprite):
         # Converts ant's current screen coordinates, to smaller resolution of pherogrid.
         #scaledown_pos = (int((self.pos.x/self.curW)*self.pgSize[0]), int((self.pos.y/self.curH)*self.pgSize[1]))
         # Get locations to check as sensor points, in pairs for better detection.
+        # mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
+        # mid_sensR = Vec2.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        # left_sens1 = Vec2.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
+        # left_sens2 = Vec2.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
+        # right_sens1 = Vec2.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
+        # right_sens2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+
+        #Try bringing the side sensors in a bit
         mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
         mid_sensR = Vec2.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
-        left_sens1 = Vec2.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
-        left_sens2 = Vec2.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
-        right_sens1 = Vec2.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
-        right_sens2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+        left_sens1 = Vec2.vint(self.pos + pg.Vector2(9, -7).rotate(self.ang))
+        left_sens2 = Vec2.vint(self.pos + pg.Vector2(8, -10).rotate(self.ang))
+        right_sens1 = Vec2.vint(self.pos + pg.Vector2(9, 7).rotate(self.ang))
+        right_sens2 = Vec2.vint(self.pos + pg.Vector2(8, 10).rotate(self.ang))
+
         # May still need to adjust these sensor positions, to improve following.
 
         
@@ -151,8 +160,12 @@ class Ant(pg.sprite.Sprite):
                  self.desireDir += pg.Vector2(self.nest.pos - self.pos).normalize() * .08
                  self.ant_group_trail.add(Phermone(self.pos, self.teamNum))
                  
-
-        if not self.has_food and left_GA_result == TrailColors[self.teamNum - 1]:
+        if not self.has_food and mid_GA_result == TrailColors[self.teamNum - 1]:
+            self.desireDir = pg.Vector2(2,0).rotate(self.ang) #.normalize()
+            maxSpeed = 10
+            wandrStr = .01
+            steerStr = 0.1
+        elif not self.has_food and left_GA_result == TrailColors[self.teamNum - 1]:
             self.desireDir += pg.Vector2(0,-2).rotate(self.ang) #.normalize()
             wandrStr = .01
             steerStr = 4
@@ -160,11 +173,7 @@ class Ant(pg.sprite.Sprite):
             self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
             wandrStr = .01
             steerStr = 4
-        elif not self.has_food and mid_GA_result == TrailColors[self.teamNum - 1]:
-            self.desireDir = pg.Vector2(2,0).rotate(self.ang) #.normalize()
-            maxSpeed = 4
-            wandrStr = .01
-            steerStr = 4
+        
 
         if left_GA_result == wallColor or left_GA_result == ObstacleColor:
             self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
