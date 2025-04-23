@@ -13,7 +13,7 @@ HEIGHT = 600            # default 800
 FPS = 60                # 48-90
 VSYNC = True            # limit frame rate to refresh rate
 SHOWFPS = True          # show framerate debug
-NUM_OBSTACLES = 30
+NUM_OBSTACLES = 50
 
 COLOR_INACTIVE = (100, 80, 255)
 COLOR_ACTIVE = (100, 200, 255)
@@ -23,7 +23,7 @@ COLOR_LIST_ACTIVE = (255, 150, 150)
 FoodRadius = 15
 
 NEW_ANT_FOOD = 8
-INITIAL_FOOD_AMOUNT = 8
+INITIAL_FOOD_AMOUNT = 20
 
 class Nest:
     def __init__(self, pos):
@@ -107,6 +107,8 @@ class Simuation:
         self.ant_group_1 = pg.sprite.Group()
         self.ant_group_2 = pg.sprite.Group()
         self.ant_splat_group = pg.sprite.Group()
+        self.ant_group_1_trail = pg.sprite.Group()
+        self.ant_group_2_trail = pg.sprite.Group()
 
         cur_w, cur_h = self.screen.get_size()
 
@@ -121,13 +123,14 @@ class Simuation:
         self.ANT_HILL_1 = anthill_image
         
         for n in range(INITIAL_ANT_COUNT):
-            self.ant_group_1.add(Ant(self.screen, self.nest1, 1))
-            self.ant_group_2.add(Ant(self.screen, self.nest2, 2))
+            self.ant_group_1.add(Ant(self.screen, self.nest1, 1, self.ant_group_1_trail))
+            self.ant_group_2.add(Ant(self.screen, self.nest2, 2, self.ant_group_2_trail))
     
     def setup_obstacles(self):
         self.obstacles = Obstacles()
         for obstacle in self.obstacles.rects:
-            pg.draw.rect(self.screen, ObstacleColor, obstacle)
+            if(pg.Vector2(obstacle.center).distance_to(self.nest1_image_pos) > 30 and pg.Vector2(obstacle.center).distance_to(self.nest2_image_pos) > 30):
+                pg.draw.rect(self.screen, ObstacleColor, obstacle)
 
     def setup_food(self):
         self.food_group = pg.sprite.Group()
@@ -159,9 +162,9 @@ class Simuation:
                 ant.kill()
 
         if self.nest1.make_new():
-            self.ant_group_1.add(Ant(self.screen, self.nest1, 1))
+            self.ant_group_1.add(Ant(self.screen, self.nest1, 1, self.ant_group_1_trail))
         if self.nest2.make_new():
-            self.ant_group_2.add(Ant(self.screen, self.nest2, 2))
+            self.ant_group_2.add(Ant(self.screen, self.nest2, 2, self.ant_group_2_trail))
 
     def handle_food_collision(self):
         for ant, collide_list in pg.sprite.groupcollide(self.ant_group_1, self.food_group, False, False).items():
@@ -186,6 +189,8 @@ class Simuation:
             self.ant_group_2.update(dt)
             self.ant_splat_group.update()
             self.food_group.update()
+            self.ant_group_1_trail.update()
+            self.ant_group_2_trail.update()
 
 
             self.handle_ant_collisions()
@@ -201,10 +206,14 @@ class Simuation:
                 pg.draw.rect(self.screen, ObstacleColor, obstacle)
             
             self.ant_splat_group.draw(self.screen)
+            self.ant_group_1_trail.draw(self.screen) 
+            self.ant_group_2_trail.draw(self.screen) 
             self.screen.blit(self.ANT_HILL_1, self.nest1_image_pos)
             self.screen.blit(self.ANT_HILL_1, self.nest2_image_pos)
             self.ant_group_1.draw(self.screen)
             self.ant_group_2.draw(self.screen)
+            
+
             
 
             self.food_group.draw(self.screen)

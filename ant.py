@@ -7,6 +7,9 @@ PRATIO = 5
 
 FoodColor = (111, 168, 50)
 ObstacleColor = (201, 159, 74)
+AntColors = [(100,42,42),(50,80,80)]
+TrailColors = [(230, 48, 48),(85, 194, 194)]
+
 
 def is_food(color):
     if(color[1] == 0):
@@ -46,9 +49,27 @@ class AntSplat(pg.sprite.Sprite):
         for splatter in self.splatters:
             pg.draw.circle(self.image, self.color, [20+splatter[0], 20+splatter[1]], 5)
 
+class Phermone(pg.sprite.Sprite):
+    def __init__(self, pos, teamNum):
+        super().__init__()
+
+        self.image = pg.Surface([40,40])
+        self.image.set_colorkey(0)
+        self.color = TrailColors[teamNum - 1]
+        self.teamNum = teamNum
+        self.remaining = 800
+
+        pg.draw.circle(self.image, self.color, [5, 5], 2)
+        self.rect = self.image.get_rect(center=[pos[0] + 10, pos[1] + 10])
+
+    def update(self): 
+        if(self.remaining <= 0):
+             self.kill()
+        self.remaining -= 1
+
 class Ant(pg.sprite.Sprite):
     
-    def __init__(self, drawSurf, nest, teamNum):
+    def __init__(self, drawSurf, nest, teamNum, ant_group_trail):
         super().__init__()
         self.drawSurf = drawSurf
         self.curW, self.curH = self.drawSurf.get_size()
@@ -57,8 +78,9 @@ class Ant(pg.sprite.Sprite):
         self.image.set_colorkey(0)
         self.teamNum = teamNum
         self.health = 100
+        self.ant_group_trail = ant_group_trail
 
-        antColor = (100,42,42) if teamNum == 1 else (50,80,80)
+        antColor = AntColors[teamNum - 1]
         # Draw Ant
         pg.draw.aaline(self.image, antColor, [0, 5], [11, 15])
         pg.draw.aaline(self.image, antColor, [0, 15], [11, 5]) # legs
@@ -94,12 +116,21 @@ class Ant(pg.sprite.Sprite):
         # Converts ant's current screen coordinates, to smaller resolution of pherogrid.
         #scaledown_pos = (int((self.pos.x/self.curW)*self.pgSize[0]), int((self.pos.y/self.curH)*self.pgSize[1]))
         # Get locations to check as sensor points, in pairs for better detection.
+        # mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
+        # mid_sensR = Vec2.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
+        # left_sens1 = Vec2.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
+        # left_sens2 = Vec2.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
+        # right_sens1 = Vec2.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
+        # right_sens2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+
+        #Try bringing the side sensors in a bit
         mid_sensL = Vec2.vint(self.pos + pg.Vector2(21, -3).rotate(self.ang))
         mid_sensR = Vec2.vint(self.pos + pg.Vector2(21, 3).rotate(self.ang))
-        left_sens1 = Vec2.vint(self.pos + pg.Vector2(18, -14).rotate(self.ang))
-        left_sens2 = Vec2.vint(self.pos + pg.Vector2(16, -21).rotate(self.ang))
-        right_sens1 = Vec2.vint(self.pos + pg.Vector2(18, 14).rotate(self.ang))
-        right_sens2 = Vec2.vint(self.pos + pg.Vector2(16, 21).rotate(self.ang))
+        left_sens1 = Vec2.vint(self.pos + pg.Vector2(9, -7).rotate(self.ang))
+        left_sens2 = Vec2.vint(self.pos + pg.Vector2(8, -10).rotate(self.ang))
+        right_sens1 = Vec2.vint(self.pos + pg.Vector2(9, 7).rotate(self.ang))
+        right_sens2 = Vec2.vint(self.pos + pg.Vector2(8, 10).rotate(self.ang))
+
         # May still need to adjust these sensor positions, to improve following.
 
         
@@ -113,8 +144,6 @@ class Ant(pg.sprite.Sprite):
         
         wallColor = (50,50,50)  # avoid walls of this color
 
-        # if self.mode == AntMode.FIND_FOOD and mid_GA_result == FoodColor: # if food
-        # # if self.mode == AntMode.FIND_FOOD and is_food(mid_GA_result): # if food
         if self.mode == AntMode.FIND_FOOD and self.has_food:
                 self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize() 
                 maxSpeed = 5
@@ -129,8 +158,23 @@ class Ant(pg.sprite.Sprite):
                  self.nest.food += 1
             else:
                  self.desireDir += pg.Vector2(self.nest.pos - self.pos).normalize() * .08
-
+                 self.ant_group_trail.add(Phermone(self.pos, self.teamNum))
+                 
+        if not self.has_food and mid_GA_result == TrailColors[self.teamNum - 1]:
+            self.desireDir = pg.Vector2(2,0).rotate(self.ang) #.normalize()
+            maxSpeed = 10
+            wandrStr = .01
+            steerStr = 0.1
+        elif not self.has_food and left_GA_result == TrailColors[self.teamNum - 1]:
+            self.desireDir += pg.Vector2(0,-2).rotate(self.ang) #.normalize()
+            wandrStr = .01
+            steerStr = 4
+        elif not self.has_food and right_GA_result == TrailColors[self.teamNum - 1]:
+            self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
+            wandrStr = .01
+            steerStr = 4
         
+
         if left_GA_result == wallColor or left_GA_result == ObstacleColor:
             self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
             wandrStr = .1
