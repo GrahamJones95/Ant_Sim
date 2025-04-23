@@ -13,7 +13,7 @@ HEIGHT = 600            # default 800
 FPS = 60                # 48-90
 VSYNC = True            # limit frame rate to refresh rate
 SHOWFPS = True          # show framerate debug
-NUM_OBSTACLES = 30
+NUM_OBSTACLES = 50
 
 COLOR_INACTIVE = (100, 80, 255)
 COLOR_ACTIVE = (100, 200, 255)
@@ -129,7 +129,8 @@ class Simuation:
     def setup_obstacles(self):
         self.obstacles = Obstacles()
         for obstacle in self.obstacles.rects:
-            pg.draw.rect(self.screen, ObstacleColor, obstacle)
+            if(pg.Vector2(obstacle.center).distance_to(self.nest1_image_pos) > 30 and pg.Vector2(obstacle.center).distance_to(self.nest2_image_pos) > 30):
+                pg.draw.rect(self.screen, ObstacleColor, obstacle)
 
     def setup_food(self):
         self.food_group = pg.sprite.Group()
