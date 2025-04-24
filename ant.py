@@ -4,6 +4,7 @@ import pygame as pg
 import numpy as np
 from enum import Enum
 PRATIO = 5 
+MAX_PHERMONE_COUNT = 5000
 
 FoodColor = (111, 168, 50)
 ObstacleColor = (201, 159, 74)
@@ -80,16 +81,7 @@ class Ant(pg.sprite.Sprite):
         self.health = 100
         self.ant_group_trail = ant_group_trail
 
-        antColor = AntColors[teamNum - 1]
-        # Draw Ant
-        pg.draw.aaline(self.image, antColor, [0, 5], [11, 15])
-        pg.draw.aaline(self.image, antColor, [0, 15], [11, 5]) # legs
-        pg.draw.aaline(self.image, antColor, [0, 10], [12, 10])
-        pg.draw.aaline(self.image, antColor, [2, 0], [4, 3]) # antena l
-        pg.draw.aaline(self.image, antColor, [9, 0], [7, 3]) # antena r
-        pg.draw.ellipse(self.image, antColor, [3, 2, 6, 6]) # head
-        pg.draw.ellipse(self.image, antColor, [4, 6, 4, 9]) # body
-        pg.draw.ellipse(self.image, antColor, [3, 13, 6, 8]) # rear
+        
         
         self.food_blit = pg.Surface([3,3])
         pg.draw.circle(self.food_blit, FoodColor, [0,0], 10)
@@ -104,7 +96,19 @@ class Ant(pg.sprite.Sprite):
         self.mode = 0
         self.mode = AntMode.FIND_FOOD
         self.has_food = False
-    
+
+    def draw_ant(self):
+        antColor = AntColors[self.teamNum - 1]
+        # Draw Ant
+        pg.draw.aaline(self.image, antColor, [0, 5], [11, 15])
+        pg.draw.aaline(self.image, antColor, [0, 15], [11, 5]) # legs
+        pg.draw.aaline(self.image, antColor, [0, 10], [12, 10])
+        pg.draw.aaline(self.image, antColor, [2, 0], [4, 3]) # antena l
+        pg.draw.aaline(self.image, antColor, [9, 0], [7, 3]) # antena r
+        pg.draw.ellipse(self.image, antColor, [3, 2, 6, 6]) # head
+        pg.draw.ellipse(self.image, antColor, [4, 6, 4, 9]) # body
+        pg.draw.ellipse(self.image, antColor, [3, 13, 6, 8]) # rear
+
     def update(self, dt):  # behavior
         mid_result = left_result = right_result = [0,0,0]
         mid_GA_result = left_GA_result = right_GA_result = [0,0,0]
@@ -142,7 +146,6 @@ class Ant(pg.sprite.Sprite):
         if self.drawSurf.get_rect().collidepoint(right_sens1) and self.drawSurf.get_rect().collidepoint(right_sens2):
             right_GA_result = max(self.drawSurf.get_at(right_sens1)[:3],self.drawSurf.get_at(right_sens2)[:3])
         
-        wallColor = (50,50,50)  # avoid walls of this color
 
         if self.mode == AntMode.FIND_FOOD and self.has_food:
                 self.desireDir = pg.Vector2(-1,0).rotate(self.ang).normalize() 
@@ -153,15 +156,16 @@ class Ant(pg.sprite.Sprite):
 
         elif(self.mode == AntMode.RETURN_NEST):
             if(self.pos.distance_to(self.nest.pos) < 20):
-                 self.mode = AntMode.FIND_FOOD
-                 self.has_food = False
-                 self.nest.food += 1
+                self.mode = AntMode.FIND_FOOD
+                self.has_food = False
+                self.nest.food += 1
             else:
-                 self.desireDir += pg.Vector2(self.nest.pos - self.pos).normalize() * .08
-                 self.ant_group_trail.add(Phermone(self.pos, self.teamNum))
+                self.desireDir += pg.Vector2(self.nest.pos - self.pos).normalize() * .08
+                if(len(self.ant_group_trail) < MAX_PHERMONE_COUNT):
+                    self.ant_group_trail.add(Phermone(self.pos, self.teamNum))
                  
         if not self.has_food and mid_GA_result == TrailColors[self.teamNum - 1]:
-            self.desireDir = pg.Vector2(2,0).rotate(self.ang) #.normalize()
+            self.desireDir += pg.Vector2(2,0).rotate(self.ang) #.normalize()
             maxSpeed = 10
             wandrStr = .01
             steerStr = 0.1
@@ -175,15 +179,15 @@ class Ant(pg.sprite.Sprite):
             steerStr = 4
         
 
-        if left_GA_result == wallColor or left_GA_result == ObstacleColor:
+        if left_GA_result == ObstacleColor:
             self.desireDir += pg.Vector2(0,2).rotate(self.ang) #.normalize()
             wandrStr = .1
             steerStr = 7
-        elif right_GA_result == wallColor or right_GA_result == ObstacleColor:
+        elif right_GA_result == ObstacleColor:
             self.desireDir += pg.Vector2(0,-2).rotate(self.ang) #.normalize()
             wandrStr = .1
             steerStr = 7
-        elif mid_GA_result == wallColor or mid_GA_result == ObstacleColor:
+        elif mid_GA_result == ObstacleColor:
             self.desireDir = pg.Vector2(-2,0).rotate(self.ang) #.normalize()
             maxSpeed = 4
             wandrStr = .1
