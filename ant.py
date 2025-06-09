@@ -81,7 +81,7 @@ class Ant(pg.sprite.Sprite):
         self.health = 100
         self.ant_group_trail = ant_group_trail
 
-        
+        self.draw_ant()
         
         self.food_blit = pg.Surface([3,3])
         pg.draw.circle(self.food_blit, FoodColor, [0,0], 10)
